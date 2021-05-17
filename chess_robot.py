@@ -5,7 +5,10 @@ class ChessRobot:
     def __init__(self,play_as):
         # Connect to Arduino over serial COM6 with baud = 9600
         self.play_as_color = play_as # or 'W'
-        self.controller = serial.Serial('/dev/ttyACM0',9600)
+        self.fen = '' # FEN game notation for current position
+
+        # self.controller = serial.Serial('/dev/ttyACM0',9600)
+        self.controller = serial.Serial('COM6',9600)
         self.controller.flush()
 
         if (play_as == 'B'):
@@ -29,6 +32,9 @@ class ChessRobot:
         # play as 'W' for white or 'B' for black
         self.send_command(f'PLAYAS {self.play_as_color}')
 
+    def set_fen(self,current_fen):
+        self.fen = current_fen
+
     def home(self):
         self.toggle_enable()
         self.send_command('HOME')
@@ -42,10 +48,27 @@ class ChessRobot:
         self.send_command('putdown')
         self.toggle_enable()
 
+    def kingside(self):
+        if (self.play_as_color == 'B'): # black kingside
+            self.move('E8','G8') # move king first
+            self.move('H8','F8') # move rook
+        else: # white kingside
+            self.move('E1','G1')
+            self.move('H1','F1')
+
+    def queenside(self):
+        if (self.play_as_color == 'B'): # black queenside
+            self.move('E8','C8') # move king first
+            self.move('A8','D8')
+        else: # white queenside
+            self.move('E1','C1')
+            self.move('A1','D1')
+
     def capture(self,start,dest,captured_piece):
         self.toggle_enable()
         self.send_command(f'GO {dest}')
         self.send_command('pickup')
+        captured_piece = captured_piece.upper()
 
         if (self.play_as_color == 'B'):
 
@@ -58,9 +81,9 @@ class ChessRobot:
                 capture_file = 'B' if (self.get_num_of('B') == 2) else 'C'
                 capture_square = f'{capture_file}{self.capture_rank}'
 
-            elif (captured_piece == 'K'):
+            elif (captured_piece == 'N'):
                 # Knight
-                capture_file = 'D' if (self.get_num_of('K') == 2) else 'E'
+                capture_file = 'D' if (self.get_num_of('N') == 2) else 'E'
                 capture_square = f'{capture_file}{self.capture_rank}'
 
             elif (captured_piece == 'R'):
@@ -84,9 +107,9 @@ class ChessRobot:
                 capture_file = 'G' if (self.get_num_of('B') == 2) else 'F'
                 capture_square = f'{capture_file}{self.capture_rank}'
 
-            elif (captured_piece == 'K'):
+            elif (captured_piece == 'N'):
                 # Knight
-                capture_file = 'E' if (self.get_num_of('K') == 2) else 'D'
+                capture_file = 'E' if (self.get_num_of('N') == 2) else 'D'
                 capture_square = f'{capture_file}{self.capture_rank}'
 
             elif (captured_piece == 'R'):
@@ -107,14 +130,18 @@ class ChessRobot:
         self.send_command('putdown')
         self.toggle_enable()
 
+    def en_passant(self):
+        pass
 
     # return the number of enemy pieces remaining on the board of a certain type
     def get_num_of(self,piece):
-        if (piece == 'P'):
-            # GET FROM FEN notation: Pawn
-            return 8
+        if (self.play_as_color == 'B'):
+            piece = piece.upper() # look for captured white pieces (capital in FEN)
         else:
-            return 2
+            piece = piece.lower() # look for captured black pieces
+        
+        positions = self.fen.split()[0]
+        return positions.count(piece)
 
     def close(self):
         self.controller.close()
