@@ -18,6 +18,7 @@ class ChessRobot:
             self.capture_file = 'I' # ASCII 73
             self.capture_rank = 0
 
+    # Send blocking call to Arduino
     def send_command(self,cmd):
         # self.controller.write(bytes(f'{cmd}\n','utf-8'))
         self.controller.write(bytes(f'{cmd}\n','utf-8'))

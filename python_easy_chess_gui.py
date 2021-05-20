@@ -231,8 +231,8 @@ menu_def_play = [
 ]
 
 # Connect to Arduino over serial COM6 with baud = 9600
-import ChessRobot
-robot = ChessRobot.ChessRobot('B')
+import chess_robot
+robot = chess_robot.ChessRobot('B')
 
 # Calls the proper arduino subprocess over serial com
 def get_best_move(best_move: chess.Move, board: chess.Board):

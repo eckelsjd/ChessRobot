@@ -1,0 +1,203 @@
+<ScreenManager>:
+    MainScreen:
+        id: main_screen
+    PlayEngineScreen:
+        id: play_engine
+
+<PlayEngineScreen>:
+    name: 'play_engine'
+    chessboard: chessboard # link chessboard widget to main.py
+    canvas.before:
+        Color:
+            rgba: app.bg_color
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    BoxLayout:
+        id: play_engine_frame
+        orientation: 'horizontal'
+        padding: 10
+        spacing: 10
+
+        GridLayout:
+            id: chessboard
+            rows: 8
+            columns: 8
+            size_hint: (0.6,1)
+            spacing: 1
+
+        BoxLayout:
+            id: game_panel
+            orientation: 'vertical'
+            size_hint: (0.4,1)
+            spacing: 10
+            
+            Label:
+                text: app.score
+                font_size: 30
+                size_hint: (1,0.2)
+                font_name: 'data/fonts/digital-7/digital-7'
+
+            BoxLayout:
+                orientation: 'horizontal'
+                spacing: 20
+                size_hint: (1,0.2)
+                Label:
+                    text: "Turn:"
+                    font_size: 35
+                    font_name: 'data/fonts/futura_light_font'
+                Label:
+                    color: [1,1,1,1]
+                    text: "White"
+                    font_size: 35
+                    font_name: 'data/fonts/futura_light_font'
+                    canvas.before:
+                        Color:
+                            rgba: app.white_play_color
+                        Rectangle:
+                            size: self.size
+                            pos: self.pos
+                Label:
+                    color: [0,0,0,1]
+                    text: "Black"
+                    font_size: 35
+                    font_name: 'data/fonts/futura_light_font'
+                    canvas.before:
+                        Color:
+                            rgba: app.black_play_color
+                        Rectangle:
+                            size: self.size
+                            pos: self.pos
+            Label:
+                color: [0.1,0.1,0.1,1]
+                text: app.game_moves_string
+                font_size: 20
+                font_name: 'data/fonts/futura_light_font'
+                size_hint: (1,0.4)
+                size: self.texture_size
+                text_size: self.size
+                halign: 'left'
+                valign: 'top'
+                padding: (10,10)
+                canvas.before:
+                    Color:
+                        rgba:[0.9,0.9,0.9,0.7]
+                    Rectangle:
+                        size: self.size
+                        pos: self.pos
+            BoxLayout:
+                orientation: 'horizontal'
+                size_hint: (1, 0.2)
+                spacing: 5
+                Button:
+                    text: 'Main\nmenu'
+                    font_size: 25
+                    font_name: 'data/fonts/futura_light_font'
+                    halign: 'center'
+                    background_normal: ''
+                    background_color: [67/255,39/255,17/255,0.8]
+                    on_release: app.quit_game()
+                Button:
+                    text: 'Reset\nboard'
+                    font_size: 25
+                    font_name: 'data/fonts/futura_light_font'
+                    halign: 'center'
+                    background_normal: ''
+                    background_color: [67/255,39/255,17/255,0.8]
+                Button:
+                    text: 'Save\ngame'
+                    font_size: 25
+                    font_name: 'data/fonts/futura_light_font'
+                    halign: 'center'
+                    background_normal: ''
+                    background_color: [67/255,39/255,17/255,0.8]
+                Button:
+                    text: 'Load\ngame'
+                    font_size: 25
+                    font_name: 'data/fonts/futura_light_font'
+                    halign: 'center'
+                    background_normal: ''
+                    background_color: [67/255,39/255,17/255,0.8]
+
+<MainScreen>:
+    name: 'main'
+    canvas.before:
+        Rectangle:
+            pos: self.pos
+            size: self.size
+            source: 'data/images/other/main_bg.jpg'
+
+    BoxLayout:
+        orientation: 'horizontal'
+        padding: 10
+
+        BoxLayout: # left
+            orientation: 'vertical'
+            padding: 40
+            spacing: 20
+
+            Label:
+                text: "ChessBot.io"
+                font_name: 'data/fonts/digital-7/digital-7'
+                font_size: 45
+            Button:
+                text: "Play Engine"
+                font_name: 'data/fonts/futura_light_font'
+                font_size: 30
+                on_release: app.handle_play_engine()
+            Button:
+                text: "Engine v. Engine"
+                font_name: 'data/fonts/futura_light_font'
+                font_size: 30
+            Button:
+                text: "Play remote player"
+                font_name: 'data/fonts/futura_light_font'
+                font_size: 30
+
+        BoxLayout: # right
+            orientation: 'vertical'
+            padding: 20
+
+            canvas.before:
+                Color:
+                    rgba: [0.7, 0.7, 0.7, 0.7]
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+            Image:
+                source: 'data/images/other/knight.png'
+                size_hint: (1,0.75)
+
+            BoxLayout:
+                orientation: 'horizontal'
+                padding: 20
+                size_hint: (1,0.25)
+                spacing: 15
+
+                Button:
+                    text: 'Jog'
+                    font_name: 'data/fonts/futura_light_font'
+                    font_size: 25
+                Button:
+                    text: 'Settings'
+                    font_name: 'data/fonts/futura_light_font'
+                    font_size: 25
+                Button:
+                    text: 'Exit'
+                    font_name: 'data/fonts/futura_light_font'
+                    font_size: 25
+                    on_release: app.close()
+
+<ChessCell>:
+    on_release: app.handle_chesscell_clicked(self.id)
+    background_normal: ''
+    Image:
+        set_hint: None, None
+        allow_stretch: True
+        keep_ratio: False
+        y: self.parent.y - (self.parent.height - self.height)/2
+        x: self.parent.x
+        height: self.parent.height 
+        width: self.parent.width
