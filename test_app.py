@@ -1,3 +1,6 @@
+# import os
+# os.environ['KIVY_GL_BACKEND'] = 'gl'
+
 import kivy
 kivy.require('2.0.0')
 

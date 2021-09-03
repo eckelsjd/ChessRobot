@@ -11,13 +11,17 @@ from kivy.properties import StringProperty,ListProperty,ObjectProperty
 
 import chess
 import chess.engine
+import chess_robot
+
+import string
 
 # Class to maintain chess board, control robot/camera, hold chess engine
 class EnginePlayer():
     def __init__(self):
         self.board = chess.Board()
-        # self.engine = chess.engine.SimpleEngine.popen_uci("stockfish") # TODO: fix hard code of engine
-        self.robot = ''
+        self.engine = chess.engine.SimpleEngine.popen_uci("stockfish") # TODO: fix hard code of engine
+        self.robot = chess_robot.ChessRobot('B')
+        # self.robot.set_play_as()
     
     def chesscell_clicked(self,id):
         print(f'Id = {id}')
@@ -25,8 +29,43 @@ class EnginePlayer():
         return is_legal_move
 
     def kill_yourself(self):
-        # shutdown serial and close game board
-        pass
+        # shutdown serial and reset game board
+        self.board.reset()
+        # self.robot.close()
+        # if (self.engine is not None):
+        #     self.engine.quit() 
+
+    def move(self):
+        best_move = self.engine.play(self.board, chess.engine.Limit(depth=10)).move
+        # robot make the move here
+        uci = best_move.uci()
+        first_square = uci[0:2].upper()
+        second_square = uci[2:4].upper()
+
+        capture = self.board.is_capture(best_move)
+        kingside = self.board.is_kingside_castling(best_move)
+        queenside = self.board.is_queenside_castling(best_move)
+        en_passant = self.board.is_en_passant(best_move)
+
+        if (capture):
+            captured_piece = self.board.piece_at(chess.parse_square(second_square.lower())).symbol()
+            self.robot.set_fen(self.board.fen())
+            self.robot.capture(first_square,second_square,captured_piece)
+
+        elif (kingside):
+            self.robot.kingside()
+
+        elif (queenside):
+            self.robot.queenside()
+
+        elif (en_passant):
+            self.robot.en_passant()
+
+        else:
+            # normal move
+            self.robot.move(first_square,second_square)
+        
+        return best_move
 
 class ChessCell(Button):
     pass
@@ -40,7 +79,6 @@ class PlayEngineScreen(Screen):
     def __init__(self,**kwargs):
         super(PlayEngineScreen,self).__init__(**kwargs)
         self.chesscell_ids = {}
-        self.engine_player = EnginePlayer()
         image_dir = 'data/images/chess-pieces/'
         self.piece_image_dict = {'p': image_dir + 'BlackPawn.png',
                 'r': image_dir + 'BlackRook.png',
@@ -55,8 +93,13 @@ class PlayEngineScreen(Screen):
                 'Q': image_dir + 'WhiteQueen.png',
                 'K': image_dir + 'WhiteKing.png',
             }
+        self.selected_square = None
+        self.engine_player = None
         
     def initialize_chessboard(self):
+        # Open chess engine
+        self.engine_player = EnginePlayer()
+
         white_color = [216/255, 209/255, 191/255, 1]
         black_color = [0/255, 111/255, 68/255, 1]
         # create chessboard
@@ -80,9 +123,102 @@ class PlayEngineScreen(Screen):
         self.update_positions()
 
     def chesscell_clicked(self,id):
-        is_legal_move = self.engine_player.chesscell_clicked(id)
+        # is_legal_move = self.engine_player.chesscell_clicked(id)
 
-        return is_legal_move
+        if id == self.selected_square:
+            self.update_positions()
+            was_move_made = False
+        elif self.selected_square == None:
+            self.select_piece(id)
+            was_move_made = False
+        else:
+            was_move_made = self.move_piece(id)
+
+        return was_move_made
+    
+    def select_piece(self, id):
+        square_num = self.id_to_square(id)
+        square_san = self.id_to_san(id)
+        piece = self.engine_player.board.piece_at(square_num)
+
+        legal_move_dict = self.create_legal_move_dict()
+        
+        if square_san in legal_move_dict:
+            id_list = []
+            for move in legal_move_dict[square_san]:
+                id_list.append(self.san_to_id(move))
+            self.highlight_chesscell(id_list)
+        self.selected_square = id
+    
+    def move_piece(self, id):
+        legal_move_dict = self.create_legal_move_dict()
+        legal_ids = []
+        try:
+            for san in legal_move_dict[\
+                self.id_to_san(self.selected_square)]:
+                legal_ids.append(self.san_to_id(san))
+        except KeyError:
+            pass
+        
+        if int(id) in legal_ids:
+            original_square = self.id_to_san(self.selected_square)
+            current_square = self.id_to_san(id)
+            move = chess.Move.from_uci(original_square + current_square)
+
+            self.engine_player.board.push(move)
+            self.update_positions()
+            self.selected_square = None
+            was_move_made = True
+
+            # if not self.game_end_check():
+            #     Clock.schedule_once(self.start_engine_move)
+
+        else:
+            self.update_positions()
+            self.select_piece(id)
+            was_move_made = False
+        
+        return was_move_made
+    
+    def id_to_square(self, id):
+        id = int(id)
+        row = abs(id//8 - 8)
+        column = id % 8
+        return (row-1) * 8 + column
+
+    def id_to_san(self, id):
+        id = int(id)
+        row = abs(id//8 - 8)
+        column = list(string.ascii_lowercase)[id % 8]
+        return column + str(row)
+
+    def san_to_id(self, san):
+        column = san[0]
+        row = int(san[1])
+        id_row = 64 - (row * 8)
+        id_column = list(string.ascii_lowercase).index(column)
+        id = id_row + id_column
+        return id
+
+    # TODO: shape this up
+    def create_legal_move_dict(self):
+        legal_moves = list(self.engine_player.board.legal_moves)
+        legal_move_dict = {}
+        for move in legal_moves:
+            move = str(move)
+            if move[:2] in legal_move_dict:
+                legal_move_dict[move[:2]] = \
+                    legal_move_dict[move[:2]] + [move[2:]]
+            else:
+                legal_move_dict[move[:2]] = [move[2:]]
+
+        return legal_move_dict
+
+    def highlight_chesscell(self, id_list):
+        self.update_positions()
+        highlight_image = 'data/images/other/highlight.png'
+        for id in id_list:
+            self.chesscell_ids[str(id)].children[0].source = highlight_image
 
     def update_positions(self):
         # Get the board positions from the fen
@@ -98,10 +234,17 @@ class PlayEngineScreen(Screen):
             else:
                 image = 'data/images/other/transparency.png'
             self.chesscell_ids[str(x[0])].children[0].source = image
+
+    def engine_move(self):
+        best_move = self.engine_player.move()
+        self.engine_player.board.push(best_move)
+        self.update_positions()
+        return
     
     def close(self):
         self.chessboard.clear_widgets()
-        self.engine_player.kill_yourself()
+        if self.engine_player is not None:
+            self.engine_player.kill_yourself()
         
 class ChessbotApp(App):
 
@@ -132,6 +275,8 @@ class ChessbotApp(App):
         return  manager
     
     def close(self):
+        if self.play_engine_screen is not None:
+            self.play_engine_screen.close()
         App.get_running_app().stop()
         print("Exiting...")
     
@@ -161,23 +306,26 @@ class ChessbotApp(App):
     def handle_chesscell_clicked(self,id):
 
         if self.turn() == 'w':
-            is_legal_move = self.play_engine_screen.chesscell_clicked(id)
+            move_was_made = self.play_engine_screen.chesscell_clicked(id)
 
-            if id == self.selected_square:
-                self.update_board()
-            elif self.selected_square == None:
-                self.select_piece(id)
-            else:
-                self.move_piece(id)
+            # change indication of whose move it is
+            if (move_was_made):
+                if(self.turn() == 'w'):
+                    self.white_play_color = self.bg_color
+                    self.black_play_color = self.curr_play_color
+                else:
+                    self.white_play_color = self.curr_play_color
+                    self.black_play_color = self.bg_color
+                
+                # Start engine move
+                self.play_engine_screen.engine_move()
 
-        # change indication of whose move it is
-        if (is_legal_move):
-            if(self.white_play_color == self.curr_play_color):
-                self.white_play_color = self.bg_color
-                self.black_play_color = self.curr_play_color
-            else:
+                # Engine is done when this returns; update turn display
                 self.white_play_color = self.curr_play_color
                 self.black_play_color = self.bg_color
+
+        else:
+            pass # ignore input when it is engine's turn
 
 
 if __name__ == '__main__':

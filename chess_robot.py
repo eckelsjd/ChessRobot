@@ -7,8 +7,8 @@ class ChessRobot:
         self.play_as_color = play_as # or 'W'
         self.fen = '' # FEN game notation for current position
 
-        # self.controller = serial.Serial('/dev/ttyACM0',9600)
-        self.controller = serial.Serial('COM6',9600)
+        self.controller = serial.Serial('/dev/ttyACM0',9600)
+        # self.controller = serial.Serial('COM6',9600) 
         self.controller.flush()
 
         if (play_as == 'B'):
