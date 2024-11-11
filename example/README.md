@@ -1,0 +1,1 @@
+I'm keeping this folder in the repo just to show the original boilerplate for this project. It uses `kivy` for a GUI chess game in Python. I adapted this script to work with the Raspberry pi and Arduino for physically moving chess pieces with the Chessbot along with the virtual chess game. It is also adapted to automatically make opponent moves with the Stockfish chess engine.
